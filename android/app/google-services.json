@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1033111971494",
+    "project_id": "hikespot-taxi-app",
+    "storage_bucket": "hikespot-taxi-app.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1033111971494:android:8b843228f2b89eea5a3667",
+        "android_client_info": {
+          "package_name": "com.app.hikespot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAkJeJZJeHAVOKlm_wlPl2tFdH7Xv9KWYg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1033111971494:android:758b652fd508bc2c5a3667",
+        "android_client_info": {
+          "package_name": "net.hikespot.taxi"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAkJeJZJeHAVOKlm_wlPl2tFdH7Xv9KWYg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
