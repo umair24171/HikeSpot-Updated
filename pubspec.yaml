@@ -99,6 +99,7 @@ dependencies:
   flutter_notification_channel: ^3.1.0
   dio: ^5.6.0
   shimmer: ^3.0.0
+  connectivity_plus: ^6.0.5
 
   flutter_launcher_icons: ^0.14.1
 

@@ -89,6 +89,14 @@ class UserGoogleMapState extends State<UserGoogleMap> {
               initialCameraPosition: _getInitialCameraPosition(),
               onMapCreated: _onMapCreated,
               onCameraMove: _onCameraMove,
+              // ✅ Add padding to account for bottom riding section panel
+              // This creates a split-screen effect like Uber/Bolt
+              padding: const EdgeInsets.only(
+                top: 50,
+                bottom: 250, // Space for riding section panel
+                left: 20,
+                right: 20,
+              ),
             );
           },
         );

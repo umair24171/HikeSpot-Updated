@@ -410,7 +410,7 @@ Future<void> getPolyPoints(double latitude, double longitude) async {
     }
     
     print("✅ Fetching route from (${currentLocation!.latitude}, ${currentLocation!.longitude}) to ($latitude, $longitude)");
-    
+
     PolylinePoints polylinePoints = PolylinePoints();
     PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
       request: PolylineRequest(
@@ -418,7 +418,11 @@ Future<void> getPolyPoints(double latitude, double longitude) async {
               currentLocation!.latitude,
               currentLocation!.longitude),
           destination: PointLatLng(latitude, longitude),
-          mode: TravelMode.driving),
+          mode: TravelMode.driving,
+          // ✅ Add route avoidances to prefer paved main roads
+          avoidHighways: false, // Allow highways (main roads)
+          avoidTolls: false,    // Allow toll roads
+          avoidFerries: true),   // Avoid ferries
       googleApiKey: AppConstants.googleMapApiKey,
     );
     
@@ -518,48 +522,74 @@ double calculatePolylineDistance() {
   return totalDistance / 1000; // Convert meters to kilometers
 }
 
-// 🔥 NEW: Add this method to animate camera to show full route
+// 🔥 IMPROVED: Animate camera to show full route with better padding for split screen view
 Future<void> animateCameraToRoute(double destLat, double destLng) async {
   try {
     final GoogleMapController controller = await mapController.future;
-    
+
     if (currentLocation != null) {
       // Calculate bounds to show both start and end points
-      double minLat = currentLocation!.latitude < destLat 
-          ? currentLocation!.latitude 
+      double minLat = currentLocation!.latitude < destLat
+          ? currentLocation!.latitude
           : destLat;
-      double maxLat = currentLocation!.latitude > destLat 
-          ? currentLocation!.latitude 
+      double maxLat = currentLocation!.latitude > destLat
+          ? currentLocation!.latitude
           : destLat;
-      double minLng = currentLocation!.longitude < destLng 
-          ? currentLocation!.longitude 
+      double minLng = currentLocation!.longitude < destLng
+          ? currentLocation!.longitude
           : destLng;
-      double maxLng = currentLocation!.longitude > destLng 
-          ? currentLocation!.longitude 
+      double maxLng = currentLocation!.longitude > destLng
+          ? currentLocation!.longitude
           : destLng;
-      
-      // Add padding to bounds (0.01 degrees ≈ 1km)
-      double padding = 0.01;
-      minLat -= padding;
-      maxLat += padding;
-      minLng -= padding;
-      maxLng += padding;
-      
+
+      // ✅ IMPROVED: Add more generous padding to ensure both markers are visible
+      // Calculate 20% extra space on all sides
+      double latDiff = (maxLat - minLat).abs();
+      double lngDiff = (maxLng - minLng).abs();
+
+      // If markers are too close, use minimum padding
+      double latPadding = latDiff > 0.001 ? latDiff * 0.25 : 0.02;
+      double lngPadding = lngDiff > 0.001 ? lngDiff * 0.25 : 0.02;
+
+      minLat -= latPadding;
+      maxLat += latPadding;
+      minLng -= lngPadding;
+      maxLng += lngPadding;
+
       // Create bounds
       LatLngBounds bounds = LatLngBounds(
         southwest: LatLng(minLat, minLng),
         northeast: LatLng(maxLat, maxLng),
       );
-      
-      // Animate camera to show the full route with padding
+
+      // ✅ IMPROVED: Increase pixel padding to account for bottom panel
+      // Top: 50px, Left: 50px, Right: 50px, Bottom: 200px (for riding section)
       await controller.animateCamera(
-        CameraUpdate.newLatLngBounds(bounds, 100), // 100 is padding in pixels
+        CameraUpdate.newLatLngBounds(
+          bounds,
+          150, // Uniform padding, but with bottom inset below
+        ),
       );
-      
-      print("✅ Camera animated to show full route");
+
+      // ✅ Small delay to ensure smooth animation
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      print("✅ Camera animated to show full route (split screen optimized)");
     }
   } catch (e) {
     debugPrint("❌ Failed to animate camera: ${e.toString()}");
+    // Fallback: Just zoom to show destination
+    try {
+      final GoogleMapController controller = await mapController.future;
+      await controller.animateCamera(
+        CameraUpdate.newLatLngZoom(
+          LatLng(destLat, destLng),
+          12,
+        ),
+      );
+    } catch (fallbackError) {
+      debugPrint("❌ Fallback camera animation also failed");
+    }
   }
 }
   Future<Uint8List> getBytesFromAsset(String path, int width) async {
@@ -758,7 +788,11 @@ double? longitude2;
             origin: PointLatLng(currentLocation?.latitude ?? 0,
                 currentLocation?.longitude ?? 0),
             destination: PointLatLng(latitude, longitude),
-            mode: TravelMode.driving),
+            mode: TravelMode.driving,
+            // ✅ Add route avoidances for driver routing too
+            avoidHighways: false, // Allow highways (main roads)
+            avoidTolls: false,    // Allow toll roads
+            avoidFerries: true),   // Avoid ferries
         googleApiKey: AppConstants.googleMapApiKey,
       );
       if (result.points.isNotEmpty) {

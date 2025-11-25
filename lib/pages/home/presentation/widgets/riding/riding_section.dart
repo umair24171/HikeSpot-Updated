@@ -34,7 +34,13 @@ class RidingSection extends StatelessWidget {
           curve: Curves.easeInOut,
           child: Container(
             width: getWidth(context),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            // ✅ Add SafeArea padding at bottom to prevent button from being hidden
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: 20 + MediaQuery.of(context).padding.bottom, // Account for system UI
+            ),
             decoration: BoxDecoration(
               color: AppColors.containerColor,
               border: Border(
@@ -503,8 +509,8 @@ Widget buildEntranceContent(BuildContext context) {
           ],
         ),
       ),
-      const SizedBox(height: 17),
-      
+      const SizedBox(height: 24), // ✅ Increased spacing for better visibility
+
       // Find driver button and filter
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

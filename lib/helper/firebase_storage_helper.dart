@@ -5,6 +5,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:hikespot/app/constants/app_constants.dart';
 import 'package:hikespot/blocs/cubits/auth_cubit.dart';
 import 'package:hikespot/core/di/service_locator_imports.dart';
+import 'package:hikespot/helper/connectivity_helper.dart';
 
 Future<String> uploadStorage(
   File file, {
@@ -12,16 +13,23 @@ Future<String> uploadStorage(
 }) async {
   final AuthCubit authCubit = Di().sl<AuthCubit>();
   try {
+    // ✅ Check internet connectivity first
+    bool hasConnection = await ConnectivityHelper.hasInternetConnection();
+    if (!hasConnection) {
+      log('hk-storage: No internet connection');
+      return "NO_CONNECTION";
+    }
+
     // ✅ Validate file exists
     if (!file.existsSync()) {
       log('hk-storage: File does not exist');
-      return "";
+      return "FILE_NOT_FOUND";
     }
 
     // ✅ Validate user is authenticated
     if (authCubit.authData.uid.isEmpty) {
       log('hk-storage: User not authenticated');
-      return "";
+      return "NOT_AUTHENTICATED";
     }
 
     // Getting image file extension

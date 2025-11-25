@@ -143,7 +143,7 @@ class CaptainUploadLicencePage extends StatelessWidget {
                             if (_imagePickerCubit.drivingLicence == null)
                               return;
                             _captainRegisterCubit.uploadDrivingLicence(
-                                _imagePickerCubit.drivingLicence!);
+                                _imagePickerCubit.drivingLicence!, context);
                           },
                         );
                       },

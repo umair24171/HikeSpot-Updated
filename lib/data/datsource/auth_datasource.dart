@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:hikespot/app/constants/app_constants.dart';
+import 'package:hikespot/helper/connectivity_helper.dart';
 import 'package:hikespot/helper/shared_prefs_helper.dart';
 import 'package:hikespot/helper/warning_helper.dart';
 import '../models/auth-model/auth_model.dart';
@@ -44,9 +45,15 @@ class AuthDataSourceImpl implements AuthDataSource {
         return const Left(AppConstants.userNotFound);
       }
     } catch (e) {
-      WarningHelper.showToast(context,
-          message: "Please Check your internet connection and try again");
-      log(e.toString());
+      log('auth_datasource error: ${e.toString()}');
+
+      // Only show toast if there's actually no internet connection
+      bool hasConnection = await ConnectivityHelper.hasInternetConnection();
+      if (!hasConnection) {
+        WarningHelper.showToast(context,
+            message: "Please check your internet connection and try again");
+      }
+
       return const Left(AppConstants.userError);
     }
   }
@@ -64,12 +71,18 @@ class AuthDataSourceImpl implements AuthDataSource {
           .collection(AppConstants.usersKey)
           .doc(authModel.uid)
           .update(authModel.toJson()); // ✅ Use toJson() to update everything
-      
+
       return Right(authModel);
     } catch (e) {
-      WarningHelper.showToast(context,
-          message: "Please Check your internet connection and try again");
-      log(e.toString());
+      log('auth_datasource update error: ${e.toString()}');
+
+      // Only show toast if there's actually no internet connection
+      bool hasConnection = await ConnectivityHelper.hasInternetConnection();
+      if (!hasConnection) {
+        WarningHelper.showToast(context,
+            message: "Please check your internet connection and try again");
+      }
+
       return const Left(AppConstants.userError);
     }
   }

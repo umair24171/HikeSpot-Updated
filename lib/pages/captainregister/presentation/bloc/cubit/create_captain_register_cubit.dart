@@ -246,11 +246,14 @@ Future<void> getDriverLocation(BuildContext context) async {
       file,
       foldername: AppConstants.carRegistrationImages,
     );
-    if (image.isNotEmpty) {
+    if (image.isNotEmpty && !image.startsWith("NO_") && !image.startsWith("FILE_") && !image.startsWith("NOT_")) {
       carRegistrationFront = image;
       emit(CreateCaptainRegisterLoaded());
       return true;
     } else {
+      // Store error code for later display
+      carRegistrationFront = "";
+      emit(CreateCaptainRegisterError());
       return false;
     }
   }
@@ -261,11 +264,14 @@ Future<void> getDriverLocation(BuildContext context) async {
       file,
       foldername: AppConstants.carRegistrationImages,
     );
-    if (image.isNotEmpty) {
+    if (image.isNotEmpty && !image.startsWith("NO_") && !image.startsWith("FILE_") && !image.startsWith("NOT_")) {
       carRegistrationBack = image;
       emit(CreateCaptainRegisterLoaded());
       return true;
     } else {
+      // Store error code for later display
+      carRegistrationBack = "";
+      emit(CreateCaptainRegisterError());
       return false;
     }
   }
@@ -284,28 +290,52 @@ Future<void> getDriverLocation(BuildContext context) async {
         if (value[0] && value[1]) {
           isUploadingFiles = false;
           AutoRouter.of(context).pop();
+          WarningHelper.showToast(context,
+              message: "Documents uploaded successfully",
+              color: AppColors.greenColor);
           emit(CreateCaptainRegisterLoaded());
         } else {
+          String errorMessage = "Error while uploading files";
+          // Check if it's a connection error
+          if (carRegistrationBack.isEmpty && carRegistrationFront.isEmpty) {
+            errorMessage = "Please check your internet connection and try again";
+          }
           WarningHelper.showToast(context,
-              message: "Error while uploading files",
+              message: errorMessage,
               color: AppColors.redColor);
           isUploadingFiles = false;
           emit(CreateCaptainRegisterError());
         }
-        emit(CreateCaptainRegisterLoaded());
       },
     );
   }
 
-  uploadDrivingLicence(File file) async {
+  uploadDrivingLicence(File file, BuildContext context) async {
     isUploadingFiles = true;
     emit(CreateCaptainRegisterLoading());
     String image = await uploadStorage(
       file,
       foldername: AppConstants.drivingLicence,
     );
-    drivingLicence = image;
-    isUploadingFiles = false;
-    emit(CreateCaptainRegisterLoaded());
+
+    if (image.isNotEmpty && !image.startsWith("NO_") && !image.startsWith("FILE_") && !image.startsWith("NOT_")) {
+      drivingLicence = image;
+      isUploadingFiles = false;
+      WarningHelper.showToast(context,
+          message: "Driving licence uploaded successfully",
+          color: AppColors.greenColor);
+      emit(CreateCaptainRegisterLoaded());
+    } else {
+      drivingLicence = "";
+      isUploadingFiles = false;
+      String errorMessage = "Error uploading driving licence";
+      if (image == "NO_CONNECTION") {
+        errorMessage = "Please check your internet connection and try again";
+      }
+      WarningHelper.showToast(context,
+          message: errorMessage,
+          color: AppColors.redColor);
+      emit(CreateCaptainRegisterError());
+    }
   }
 }
