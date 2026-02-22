@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -34,7 +36,7 @@ class RidingSection extends StatelessWidget {
           curve: Curves.easeInOut,
           child: Container(
             width: getWidth(context),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12), // 🔥 Reduced from 20 to 12 for better content visibility
             decoration: BoxDecoration(
               color: AppColors.containerColor,
               border: Border(
@@ -178,7 +180,13 @@ Widget buildSecondaryContent() {
         ],
       ),
       const SizedBox(height: 36),
-      const GestureContainer(text: "Done", isNeedArrow: false)
+       GestureContainer(text: "Done", isNeedArrow: false,onTap: (){
+  if (_menueCubit.userState == AppState.captain) {
+                _ridingSectionCubit.showCaptainWorkingSection();
+              } else {
+                _ridingSectionCubit.toggleContent();
+              }
+      },)
     ],
   );
 }
@@ -503,7 +511,7 @@ Widget buildEntranceContent(BuildContext context) {
           ],
         ),
       ),
-      const SizedBox(height: 17),
+      const SizedBox(height: 8), // 🔥 Reduced from 17 to 8 to move button higher
       
       // Find driver button and filter
       Row(
@@ -579,6 +587,7 @@ Widget buildEntranceContent(BuildContext context) {
               },
             ),
           ),
+          
           const SizedBox(width: 20),
           BlocBuilder(
             bloc: _createRideCubit,
@@ -651,6 +660,7 @@ Widget buildEntranceContent(BuildContext context) {
           ),
         ],
       ),
+      const SizedBox(height: 30),
     ],
   );
 }

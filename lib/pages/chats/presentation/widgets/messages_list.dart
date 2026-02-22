@@ -31,15 +31,21 @@ class _MessagesListState extends State<MessagesList> {
       stream: _getMessagesCubit.getMessagesDb(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return const AppTextStyle(
-              text: "Error while fecthing chats",
+          return const Center(
+            child: AppTextStyle(
+              text: "Error while fetching chats",
               fontSize: 18,
-              fontWeight: FontWeight.w500);
+              fontWeight: FontWeight.w500,
+            ),
+          );
         } else if (snapshot.data?.docs.isEmpty ?? false) {
-          return const AppTextStyle(
+          return const Center(
+            child: AppTextStyle(
               text: "No Chats Available",
               fontSize: 18,
-              fontWeight: FontWeight.w500);
+              fontWeight: FontWeight.w500,
+            ),
+          );
         } else if (snapshot.data?.docs.isNotEmpty ?? false) {
           var data = snapshot.data?.docs;
           var list = data
@@ -48,52 +54,54 @@ class _MessagesListState extends State<MessagesList> {
               )
               .toList();
           _getMessagesCubit.getMessagesLocal(list ?? []);
+          
           return BlocBuilder(
             bloc: _getMessagesCubit,
             builder: (context, state) {
-              return Expanded(
-                child: LayoutBuilder(builder: (context, builder) {
-                  bool shouldScroll = _getMessagesCubit.messages.length > 2;
-                  if (!shouldScroll) {
-                    _getMessagesCubit.messages.sort(
-                      (a, b) => a.sent.compareTo(b.sent),
-                    );
-                  } else {
-                    _getMessagesCubit.messages.sort(
-                      (a, b) => b.sent.compareTo(a.sent),
-                    );
-                  }
-                  return ListView.builder(
-                    itemCount: _getMessagesCubit.messages.length,
-                    shrinkWrap: true,
-                    reverse: shouldScroll,
-                    controller: _scrollController,
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    itemBuilder: (context, index) {
-                      var message = _getMessagesCubit.messages[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 22),
-                        child: Column(
-                          children: [
-                            message.senderId == _authCubit.authData.uid
-                                ? UserChatContainer(
-                                    message: message,
-                                  )
-                                : OtherUserContainer(
-                                    message: message,
-                                  ),
-                          ],
-                        ),
-                      );
-                    },
+              // 🔥 REMOVED Expanded - it's already wrapped in parent
+              bool shouldScroll = _getMessagesCubit.messages.length > 2;
+              
+              if (!shouldScroll) {
+                _getMessagesCubit.messages.sort(
+                  (a, b) => a.sent.compareTo(b.sent),
+                );
+              } else {
+                _getMessagesCubit.messages.sort(
+                  (a, b) => b.sent.compareTo(a.sent),
+                );
+              }
+              
+              return ListView.builder(
+                itemCount: _getMessagesCubit.messages.length,
+                shrinkWrap: true,
+                reverse: shouldScroll,
+                controller: _scrollController,
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                itemBuilder: (context, index) {
+                  var message = _getMessagesCubit.messages[index];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 22),
+                    child: Column(
+                      children: [
+                        message.senderId == _authCubit.authData.uid
+                            ? UserChatContainer(
+                                message: message,
+                              )
+                            : OtherUserContainer(
+                                message: message,
+                              ),
+                      ],
+                    ),
                   );
-                }),
+                },
               );
             },
           );
         } else {
-          return const CircularProgressIndicator();
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
         }
       },
     );

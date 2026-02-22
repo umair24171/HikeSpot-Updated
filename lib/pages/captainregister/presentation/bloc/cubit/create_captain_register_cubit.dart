@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:developer';
 import 'dart:io';
-
 import 'package:auto_route/auto_route.dart';
 import 'package:bloc/bloc.dart';
 import 'package:email_otp/email_otp.dart';
@@ -73,7 +71,7 @@ createCaptain(BuildContext context) async {
     captainLastName: textFieldCubit.lastNameController.text,
     captainNumber: textFieldCubit.phoneController.text,
     carBrand: "",
-    isVerified: false,
+    isVerified: true,
     latitude: locationData?.latitude ?? 0,
     longitude: locationData?.longitude ?? 0,
     totalRides: 0,

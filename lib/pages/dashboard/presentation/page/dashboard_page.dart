@@ -57,14 +57,14 @@ void _checkForActiveRides() {
   }
 }
 // ✨ USER SIDE: Check for active rides
-void _checkUserActiveRide() {
-  AppConstants.firestore
-      .collection("rides")
-      .where('userId', isEqualTo: authCubit.authData.uid)
-      .where('rideStatus', whereIn: ['Running', 'Arrived', 'start_destination'])
-      .limit(1)
-      .get()
-      .then((snapshot) {
+void _checkUserActiveRide() async {
+  try {
+    final snapshot = await AppConstants.firestore
+        .collection("rides")
+        .where('userId', isEqualTo: authCubit.authData.uid)
+        .where('rideStatus', whereIn: ['Running', 'Arrived', 'start_destination'])
+        .limit(1)
+        .get();
     
     if (snapshot.docs.isNotEmpty) {
       // User has an active ride!
@@ -88,20 +88,22 @@ void _checkUserActiveRide() {
     } else {
       print("✅ No active rides");
     }
-  }).catchError((error) {
+  } catch (error) {
+    // ✅ Silently handle error - don't show popup (Firebase already did)
     print("❌ Error checking active rides: $error");
-  });
+    // Network error - user will see Firebase's native error, no need to show another
+  }
 }
 
 // ✨ DRIVER SIDE: Check for active rides
-void _checkDriverActiveRide() {
-  AppConstants.firestore
-      .collection("rides")
-      .where('driverId', isEqualTo: authCubit.authData.uid)
-      .where('rideStatus', whereIn: ['Running', 'Arrived', 'start_destination'])
-      .limit(1)
-      .get()
-      .then((snapshot) {
+void _checkDriverActiveRide() async {
+  try {
+    final snapshot = await AppConstants.firestore
+        .collection("rides")
+        .where('driverId', isEqualTo: authCubit.authData.uid)
+        .where('rideStatus', whereIn: ['Running', 'Arrived', 'start_destination'])
+        .limit(1)
+        .get();
     
     if (snapshot.docs.isNotEmpty) {
       // Driver has an active ride!
@@ -133,9 +135,11 @@ void _checkDriverActiveRide() {
     } else {
       print("✅ No active rides");
     }
-  }).catchError((error) {
+  } catch (error) {
+    // ✅ Silently handle error - don't show popup (Firebase already did)
     print("❌ Error checking active rides: $error");
-  });
+    // Network error - user will see Firebase's native error, no need to show another
+  }
 }
 
 
@@ -268,6 +272,12 @@ void _checkDriverActiveRide() {
         // .orderBy('rideStartDate', descending: true) 
         .snapshots(),
     builder: (context, snapshot) {
+      // ✅ Handle errors silently - Firebase already shows error dialog
+      if (snapshot.hasError) {
+        print("❌ StreamBuilder error: ${snapshot.error}");
+        return const SizedBox(); // Hide dialog on error
+      }
+      
       if (snapshot.hasData) {
         if (snapshot.data!.docs.isEmpty) {
           return const SizedBox();
@@ -374,6 +384,12 @@ void _checkDriverActiveRide() {
                             .where('userId', isEqualTo: authCubit.authData.uid)
                             .snapshots(),
                         builder: (context, snapshot) {
+                          // ✅ Handle errors silently - Firebase already shows error dialog
+                          if (snapshot.hasError) {
+                            print("❌ User rides StreamBuilder error: ${snapshot.error}");
+                            return const SizedBox(); // Hide dialog on error
+                          }
+                          
                           if (snapshot.hasData) {
                             if (snapshot.data!.docs.isEmpty) {
                               return SizedBox();

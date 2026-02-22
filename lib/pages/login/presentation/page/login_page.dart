@@ -59,6 +59,7 @@ class LoginPage extends StatelessWidget {
                   height: getWidth(context) * 0.05,
                 ),
                 CustomTextField(
+                  text: 'Email',
                   controller: _phoneTextFieldCubit.emailController,
                   icon: AppImages.emailIcon,
                   keyboardType: TextInputType.emailAddress,

@@ -30,26 +30,26 @@ class PreferencesSettings extends StatelessWidget {
         const SizedBox(
           height: 20,
         ),
-        const SettingContainer(
-            containerText: "Change Language", icon: AppImages.languageIcon),
+        // const SettingContainer(
+        //     containerText: "Change Language", icon: AppImages.languageIcon),
+        // const SizedBox(
+        //   height: 15,
+        // ),
+        // const SettingContainer(
+        //     containerText: "Change Location", icon: AppImages.locationIcon),
         const SizedBox(
           height: 15,
         ),
-        const SettingContainer(
-            containerText: "Change Location", icon: AppImages.locationIcon),
-        const SizedBox(
-          height: 15,
-        ),
-        SettingContainer(
-          containerText: "Refer",
-          icon: AppImages.referIcon,
-          onTap: () {
-            AutoRouter.of(context).push(const ReferPageRoute());
-          },
-        ),
-        const SizedBox(
-          height: 15,
-        ),
+        // SettingContainer(
+        //   containerText: "Refer",
+        //   icon: AppImages.referIcon,
+        //   onTap: () {
+        //     AutoRouter.of(context).push(const ReferPageRoute());
+        //   },
+        // ),
+        // const SizedBox(
+        //   height: 15,
+        // ),
         SettingContainer(
           containerText: "Live Support Chat",
           icon: AppImages.liveChatIcon,

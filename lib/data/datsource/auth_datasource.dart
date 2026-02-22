@@ -44,10 +44,10 @@ class AuthDataSourceImpl implements AuthDataSource {
         return const Left(AppConstants.userNotFound);
       }
     } catch (e) {
-      WarningHelper.showToast(context,
-          message: "Please Check your internet connection and try again");
-      log(e.toString());
-      return const Left(AppConstants.userError);
+      log('auth-datasource-error: ${e.toString()}');
+      // ✅ Return descriptive error instead of showing toast here
+      // Let the presentation layer (BLoC/Cubit) decide when to show UI feedback
+      return Left('Failed to fetch user data: ${e.toString()}');
     }
   }
 
@@ -59,18 +59,32 @@ class AuthDataSourceImpl implements AuthDataSource {
       await SharedPrefsHelper.setData(
           data: jsonEncode(authModel), key: AppConstants.userKey);
       
-      // ✅ FIXED: Update ALL fields in Firebase, not just location
+      // ✅ FIXED: Manually convert nested objects to JSON to avoid serialization issues
+      Map<String, dynamic> updateData = authModel.toJson();
+      
+      // ✅ Ensure nested driverModel is properly converted to JSON
+      if (updateData['driverModel'] != null && updateData['driverModel'] is! Map) {
+        updateData['driverModel'] = authModel.driverModel.toJson();
+      }
+      
+      // ✅ Ensure nested cardModel list is properly converted to JSON
+      if (updateData['cardModel'] != null && updateData['cardModel'] is List) {
+        updateData['cardModel'] = (authModel.cardModel as List)
+            .map((card) => card.toJson())
+            .toList();
+      }
+      
+      // ✅ Update in Firebase with properly serialized data
       await AppConstants.firestore
           .collection(AppConstants.usersKey)
           .doc(authModel.uid)
-          .update(authModel.toJson()); // ✅ Use toJson() to update everything
+          .update(updateData);
       
       return Right(authModel);
     } catch (e) {
-      WarningHelper.showToast(context,
-          message: "Please Check your internet connection and try again");
-      log(e.toString());
-      return const Left(AppConstants.userError);
+      log('auth-update-error: ${e.toString()}');
+      // ✅ Return descriptive error instead of showing toast
+      return Left('Failed to update user info: ${e.toString()}');
     }
   }
 }

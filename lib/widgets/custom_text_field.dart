@@ -15,7 +15,8 @@ class CustomTextField extends StatefulWidget {
       {super.key,
       required this.controller,
       required this.icon,
-      required this.keyboardType});
+      required this.keyboardType,this.text=''});
+      final String text;
 
   @override
   State<CustomTextField> createState() => _CustomTextFieldState();
@@ -43,6 +44,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
         child: TextFormField(
           controller: widget.controller,
           style: Styles.textStyle,
+          
           cursorColor: AppColors.primaryDark,
           onChanged: (value) {
             _phoneTextFieldCubit.checkField();
@@ -57,6 +59,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           },
           keyboardType: widget.keyboardType,
           decoration: InputDecoration(
+            hint: Text(widget.text,style:  Styles.textStyle.copyWith(fontSize: 14)),
             contentPadding: const EdgeInsets.only(bottom: 4),
             prefixIcon: Column(
               mainAxisAlignment: MainAxisAlignment.center,

@@ -82,7 +82,7 @@ class UserGoogleMapState extends State<UserGoogleMap> {
               fortyFiveDegreeImageryEnabled: true,
               buildingsEnabled: true,
               markers: Set<Marker>.of(_googleMapCubit.markers),
-              style: _googleMapCubit.mapStyle,
+              // style: _googleMapCubit.mapStyle,
               circles: _driverRidesRequestsCubit.circles,
               onTap: _onMapTap,
               polylines: _buildPolylines(),
@@ -152,7 +152,6 @@ class UserGoogleMapState extends State<UserGoogleMap> {
   }
 
  // Replace the _buildPolylines method in UserGoogleMap (google_map.dart) with this:
-
 Set<Polyline> _buildPolylines() {
   if (_googleMapCubit.polylineCoordinates.isEmpty) {
     return <Polyline>{};
@@ -161,18 +160,13 @@ Set<Polyline> _buildPolylines() {
   return <Polyline>{
     Polyline(
       polylineId: const PolylineId("route"),
-      color: AppColors.primaryDark, // 🔥 Changed to primary color for better visibility
-      width: 6, // 🔥 Increased width from 5 to 6
+      color: const Color(0xFF2196F3), // 🔥 Bright blue like Uber
+      width: 8, // 🔥 MUCH thicker - increased from 6 to 8
       endCap: Cap.roundCap,
       startCap: Cap.roundCap,
-      jointType: JointType.round, // 🔥 Smoother corners
-      geodesic: true, // 🔥 Follow earth's curvature
+      jointType: JointType.round,
+      geodesic: true,
       points: _googleMapCubit.polylineCoordinates,
-      patterns: [
-        // 🔥 Optional: Add pattern for better visibility
-        // PatternItem.dot,
-        // PatternItem.gap(10),
-      ],
     ),
   };
 }
@@ -192,14 +186,12 @@ Set<Polyline> _buildPolylines() {
 // Find the _onMapCreated method and replace it with this:
 
 void _onMapCreated(GoogleMapController controller) {
-  // 🔥 FIX: Only complete if not already completed
   if (!_googleMapCubit.mapController.isCompleted) {
     _googleMapCubit.mapController.complete(controller);
-    controller.setMapStyle(_googleMapCubit.mapStyle);
     _googleMapCubit.customInfoWindowController.googleMapController = controller;
-  } else {
-    print("⚠️ MapController already completed, skipping...");
   }
+  // 🔥 REMOVED: No custom map style - use Google's default
+  print("✅ Using default Google Maps style (no custom styling)");
 }
 
   void _onCameraMove(CameraPosition position) {

@@ -202,7 +202,7 @@ class BookedRideMapState extends State<BookedRideMap> {
                     fortyFiveDegreeImageryEnabled: true,
                     buildingsEnabled: true,
                     markers: Set<Marker>.of(_googleMapCubit.markers),
-                    style: _googleMapCubit.mapStyle,
+                    // style: _googleMapCubit.mapStyle,
                     circles: _driverRidesRequestsCubit.circles,
                     onTap: _onMapTap,
                     polylines: _buildPolylines(),

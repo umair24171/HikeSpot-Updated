@@ -19,6 +19,7 @@ import 'package:hikespot/utils/images_paths.dart';
 import 'package:hikespot/utils/sizes.dart';
 import '../../../../../utils/app_colors.dart';
 
+
 class UserRideRequestDialoge extends StatefulWidget {
   const UserRideRequestDialoge({super.key});
 
@@ -33,34 +34,46 @@ class _UserRideRequestDialogeState extends State<UserRideRequestDialoge> {
       insetPadding: const EdgeInsets.all(20),
       backgroundColor: AppColors.transparent,
       child: SafeArea(
-        child: BlocBuilder(
+        child: BlocBuilder<DriverRidesRequestsCubit, DriverRidesRequestsState>(
           bloc: _driverRidesRequestsCubit,
           builder: (context, state) {
-          return Center(
+            print("🔄 Dialog rebuilt - State: ${state.runtimeType}");
+            print("🔄 Rides count: ${_driverRidesRequestsCubit.rides.length}");
+            
+            // 🔥 Get rides from cubit
+            final rides = _driverRidesRequestsCubit.rides;
+            
+            if (rides.isEmpty) {
+              return _buildNoRidesUI(context);
+            }
+
+            return Center(
               child: Container(
                 constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 1, // list height 
+                  maxHeight: MediaQuery.of(context).size.height * 1,
                 ),
                 child: SingleChildScrollView(
                   child: SizedBox(
-                    height:_driverRidesRequestsCubit.rides.length * 150.0<MediaQuery.of(context).size.height*1.2?MediaQuery.of(context).size.height*1.2:_driverRidesRequestsCubit.rides.length * 150.0, // Adjust height dynamically
+                    height: rides.length * 150.0 < MediaQuery.of(context).size.height * 1.2
+                        ? MediaQuery.of(context).size.height * 1.2
+                        : rides.length * 150.0,
                     child: Stack(
                       alignment: Alignment.topCenter,
                       children: List.generate(
-                        _driverRidesRequestsCubit.rides.length,
+                        rides.length,
                         (index) {
                           return Positioned(
-                            top: index * 50.0, // Stack items with spacing
+                            top: index * 50.0,
                             left: 0,
                             right: 0,
                             child: Dismissible(
-                              key: Key(_driverRidesRequestsCubit.rides[index].toString()),
+                              key: Key(rides[index].rideId),
                               onDismissed: (direction) =>
                                   _driverRidesRequestsCubit.removeRide(index, context),
                               child: Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: RideRequestContainer(
-                                  rideData: _driverRidesRequestsCubit.rides[index],
+                                  rideData: rides[index],
                                   index: index,
                                 ),
                               ),
@@ -72,13 +85,112 @@ class _UserRideRequestDialogeState extends State<UserRideRequestDialoge> {
                   ),
                 ),
               ),
-            ); },
+            );
+          },
         ),
       ),
     );
   }
-}
 
+  Widget _buildNoRidesUI(BuildContext context) {
+    return SizedBox(
+      width: MediaQuery.of(context).size.width,
+      height: MediaQuery.of(context).size.height * 0.85,
+      child: Stack(
+        children: [
+          // Top banner
+          Positioned(
+            top: 20,
+            left: 20,
+            right: 20,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+              decoration: BoxDecoration(
+                color: const Color(0xff1e2124).withOpacity(.9),
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: AppColors.borderColor, width: 2),
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: AppColors.primaryDark,
+                      strokeWidth: 2,
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AppTextStyle(
+                          text: "Looking for rides...",
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.whiteColor,
+                        ),
+                        SizedBox(height: 3),
+                        AppTextStyle(
+                          text: "Searching nearby passengers",
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                          color: AppColors.primaryGreyColor,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          // // Bottom cancel button
+          Positioned(
+            bottom: 0,
+            left: 20,
+            right: 20,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  print("🔴 Driver canceling search...");
+                  _driverRidesRequestsCubit.cancelSearch();
+                  Navigator.of(context).pop();
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Ink(
+                  decoration: BoxDecoration(
+                    color: const Color(0xfff00d42),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xff8c1a35),
+                      width: 2.6,
+                    ),
+                  ),
+                  child: Container(
+                    width: double.infinity,
+                    height: 55,
+                    alignment: Alignment.center,
+                    child: const AppTextStyle(
+                      text: "Cancel Search",
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.whiteColor,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+       
+       
+        ],
+      ),
+    );
+  }
+}
 
 class RideRequestContainer extends StatefulWidget {
   final RideDataModel rideData;

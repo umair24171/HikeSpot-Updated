@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -26,143 +28,176 @@ class CaptainWorkingSheet extends StatefulWidget {
 }
 
 class _CaptainWorkingSheetState extends State<CaptainWorkingSheet> {
-  Widget captainWorkingSheet() {
-    return BlocBuilder(
-      bloc: _authCubit,
-      builder: (context, state) {
-        return Column(
-          children: [
-            if (widget.isCaptain == true)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const AppTextStyle(
-                    text: "Turn on duty mode",
-                    fontSize: 17,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.whiteColor,
-                  ),
-                  InkWell(
-                      onTap: () {
-                        _authCubit.turnOnDuty(context);
-                        _driverRidesRequestsCubit.stopCircles();
-                      },
-                      child: SvgPicture.asset(
-                          _authCubit.authData.driverModel.isOnDuty
-                              ? AppImages.switchOn
-                              : AppImages.switchOff)),
-                ],
-              ),
-            if (_authCubit.authData.driverModel.isOnDuty)
-              SizedBox(
-                height: getHeight(context) * 0.037,
-              ),
-            if (_authCubit.authData.driverModel.isOnDuty ||
-                widget.isCaptain == false)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const AppTextStyle(
-                    text: "Add search range",
-                    fontSize: 17,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.whiteColor,
-                  ),
-                  GestureDetector(
+ Widget captainWorkingSheet() {
+  return BlocBuilder(
+    bloc: _authCubit,
+    builder: (context, state) {
+      return Column(
+        children: [
+          if (widget.isCaptain == true)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const AppTextStyle(
+                  text: "Turn on duty mode",
+                  fontSize: 17,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.whiteColor,
+                ),
+                InkWell(
                     onTap: () {
-                      _ridingSectionCubit.toggleCaptainWorking();
+                      _authCubit.turnOnDuty(context);
+                      _driverRidesRequestsCubit.stopCircles();
                     },
-                    child: Container(
-                      height: 30,
-                      width: 116,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: AppColors.secContainerColor,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: const AppTextStyle(
-                        text: "Entrance",
-                        fontSize: 16,
-                        color: AppColors.primaryDark,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    child: SvgPicture.asset(
+                        _authCubit.authData.driverModel.isOnDuty
+                            ? AppImages.switchOn
+                            : AppImages.switchOff)),
+              ],
+            ),
+          if (_authCubit.authData.driverModel.isOnDuty)
+            SizedBox(
+              height: getHeight(context) * 0.037,
+            ),
+          if (_authCubit.authData.driverModel.isOnDuty ||
+              widget.isCaptain == false)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const AppTextStyle(
+                  text: "Add search range",
+                  fontSize: 17,
+                  fontWeight: FontWeight.w400,
+                  color: AppColors.whiteColor,
+                ),
+                GestureDetector(
+                  onTap: () {
+                    _ridingSectionCubit.toggleCaptainWorking();
+                  },
+                  child: Container(
+                    height: 30,
+                    width: 116,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.secContainerColor,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: const AppTextStyle(
+                      text: "Entrance",
+                      fontSize: 16,
+                      color: AppColors.primaryDark,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                ],
-              ),
-            SizedBox(
-              height: getHeight(context) * 0.040,
+                ),
+              ],
             ),
-           GestureContainer(
-  text: widget.isCaptain == false ? "" : "Find customer",
-  isNeedArrow: false,
-  isValidate: _authCubit.authData.driverModel.isOnDuty ||
-      widget.isCaptain == false,
-  borderColor: widget.isCaptain == false
-      ? AppColors.transparent
-      : AppColors.transparent,
-  textColor: _authCubit.authData.driverModel.isOnDuty
-      ? AppColors.blackColor
-      : AppColors.whiteColor,
-  buttonColor: widget.isCaptain == false
-      ? AppColors.transparent
-      : AppColors.primaryDark,
-  onTap: () async {
-    if (widget.isCaptain == false) {
-      // FIXED: Proper ride cancellation
-      print("🔴 Canceling ride search...");
-      
-      try {
-        // 1. Delete the ride from Firestore if it exists
-        if (Di().sl<CreateRideCubit>().newRideId.isNotEmpty) {
-          await FirebaseFirestore.instance
-              .collection(AppConstants.ridesKey)
-              .doc(Di().sl<CreateRideCubit>().newRideId)
-              .delete();
-          print("✅ Ride deleted from Firestore");
-        }
-        
-        // 2. Cancel any active subscriptions
-        Di().sl<CreateRideCubit>().ridesSubscription?.cancel();
-        print("✅ Subscriptions cancelled");
-        
-        // 3. Stop the search circles animation
-        Di().sl<DriverRidesRequestsCubit>().stopCircles();
-        print("✅ Search circles stopped");
-        
-        // // 4. Close the dialog if it's open
-        // if (context.mounted) {
-        //   Navigator.of(context).pop();
-        //   print("✅ Dialog closed");
-        // }
-        
-        // 5. Reset UI state
-        _ridingSectionCubit.toggleContent();
-        print("✅ UI state reset");
-        
-      } catch (e) {
-        print("❌ Error canceling ride: $e");
-        // Still try to reset UI even if error occurs
-        Di().sl<DriverRidesRequestsCubit>().stopCircles();
-        _ridingSectionCubit.toggleContent();
-        if (context.mounted) {
-          Navigator.of(context).pop();
-        }
-      }
-    } else {
-      // Driver side - Find customer
-      _driverRidesRequestsCubit.checkRidesInEntrance();
-      DialogHelper.showGeDialog(
-          context: context, dialog: const UserRideRequestDialoge());
-    }
+          SizedBox(
+            height: getHeight(context) * 0.040,
+          ),
+          
+          // 🔥 WRAP IN BLOCBUILDER TO LISTEN TO STATE CHANGES
+         // 🔥 ADD TYPE PARAMETERS: BlocBuilder<CubitType, StateType>
+BlocBuilder<DriverRidesRequestsCubit, DriverRidesRequestsState>(
+  bloc: _driverRidesRequestsCubit,
+  builder: (context, state) {
+    final bool isSearching = state.isSearchingForRides;
+    final bool isEnabled = _authCubit.authData.driverModel.isOnDuty || widget.isCaptain == false;
+    
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: isEnabled ? () async {
+          if (widget.isCaptain == false) {
+            // User side - Cancel ride request
+            print("🔴 User canceling ride search...");
+            
+            try {
+              if (Di().sl<CreateRideCubit>().newRideId.isNotEmpty) {
+                await FirebaseFirestore.instance
+                    .collection(AppConstants.ridesKey)
+                    .doc(Di().sl<CreateRideCubit>().newRideId)
+                    .delete();
+                print("✅ Ride deleted from Firestore");
+              }
+              
+              Di().sl<CreateRideCubit>().ridesSubscription?.cancel();
+              Di().sl<DriverRidesRequestsCubit>().stopCircles();
+              _ridingSectionCubit.toggleContent();
+              
+            } catch (e) {
+              print("❌ Error canceling ride: $e");
+              Di().sl<DriverRidesRequestsCubit>().stopCircles();
+              _ridingSectionCubit.toggleContent();
+              if (context.mounted) {
+                Navigator.of(context).pop();
+              }
+            }
+          } else {
+            // Driver side
+            if (isSearching) {
+              // Cancel the search
+              print("🛑 Driver canceling search...");
+              _driverRidesRequestsCubit.cancelSearch();
+              
+              // Close the dialog if it's open
+              if (context.mounted && Navigator.canPop(context)) {
+                Navigator.of(context).pop();
+              }
+              
+              print("✅ Driver search cancelled");
+            } else {
+            // Navigator.of(context).pop();
+              // Start searching
+              print("🚗 Driver starting search...");
+              _driverRidesRequestsCubit.checkRidesInEntrance();
+              DialogHelper.showGeDialog(
+                  context: context, 
+                  dialog: const UserRideRequestDialoge());
+            }
+          }
+        } : null,
+        borderRadius: BorderRadius.circular(12),
+        splashColor: isSearching 
+            ? AppColors.redColor.withOpacity(0.3)
+            : AppColors.primaryDark.withOpacity(0.3),
+        child: Container(
+          width: double.infinity,
+          height: 54,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: widget.isCaptain == false
+                ? AppColors.transparent
+                : isSearching
+                    ? AppColors.transparent
+                    : isEnabled 
+                        ? AppColors.primaryDark
+                        : AppColors.primaryDark.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: widget.isCaptain == false
+              ? const SizedBox.shrink()
+              : AppTextStyle(
+                  text: isSearching ? "" : "Find customer",
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: isEnabled 
+                      ? AppColors.blackColor 
+                      : AppColors.whiteColor,
+                ),
+        ),
+      ),
+    );
   },
 ),
-        
-          ],
-        );
-      },
-    );
-  }
+ SizedBox(
+            height: getHeight(context) * 0.040,
+          ),
+        ],
+      );
+    },
+  );
+}
 
   @override
   Widget build(BuildContext context) {

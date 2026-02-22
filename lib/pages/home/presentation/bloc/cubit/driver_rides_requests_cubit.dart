@@ -11,6 +11,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hikespot/app/constants/app_constants.dart';
 import 'package:hikespot/blocs/cubits/auth_cubit.dart';
 import 'package:hikespot/core/di/service_locator_imports.dart';
+import 'package:hikespot/data/models/auth-model/auth_model.dart';
+import 'package:hikespot/data/models/driver-model/driver_model.dart';
 import 'package:hikespot/helper/warning_helper.dart';
 import 'package:hikespot/pages/home/data/model/accept-ride/accept_ride_model.dart';
 import 'package:hikespot/pages/home/data/model/ride/ride_data_model.dart';
@@ -27,126 +29,171 @@ class DriverRidesRequestsCubit extends Cubit<DriverRidesRequestsState> {
   final DriverAcceptRideUsecase _rideUsecase;
 
   DriverRidesRequestsCubit(this._rideUsecase)
-      : super(DriverRidesRequestsInitial());
+      : super(const DriverRidesRequestsInitial());
+      
   StreamSubscription driverRidesSubscription =
       const Stream.empty().listen((event) {});
   StreamSubscription notificationSubscription =
       const Stream.empty().listen((event) {});
   List<RideDataModel> rides = [];
   List<Map<String, dynamic>> notificationList = [];
-  
+  Set<Circle> circles = {};
+  bool _shouldStop = false;
 
-  // check if there is any rides in the enterd entrance
- // Replace the checkRidesInEntrance method in driver_rides_requests_cubit.dart
-// Replace the checkRidesInEntrance method in driver_rides_requests_cubit.dart
-
-void checkRidesInEntrance() {
-  debugPrint("🚗 Starting to check for nearby rides...");
-  _shouldStop = false;
-  buildCircles(AppColors.primaryDark);
-  emit(DriverRidesRequestsLoading());
-  
-  driverRidesSubscription = AppConstants.firestore
-      .collection(AppConstants.ridesKey)
-      .where("rideStatus", isEqualTo: RideStatus.Pending.name)
-      // 🔥 REMOVED orderBy to avoid Firestore index requirement
-      // .orderBy('rideStartDate', descending: true)
-      .snapshots()
-      .listen((event) {
-    var temprides =
-        event.docs.map((e) => RideDataModel.fromJson(e.data())).toList();
-
-    // 🔥 Filter by time with FLEXIBLE date parsing
-    final DateTime now = DateTime.now();
-    final DateTime fiveMinutesAgo = now.subtract(const Duration(minutes: 5));
+  // Check if there is any rides in the entered entrance
+  void checkRidesInEntrance() {
+    debugPrint("🚗 Starting to check for nearby rides...");
+    _shouldStop = false;
+    buildCircles(AppColors.primaryDark);
     
-    temprides = temprides.where((element) {
-      try {
-        DateTime rideTime;
-        
-        // Try ISO format first (new rides)
+    emit(const DriverRidesRequestsLoading(isSearchingForRides: true));
+    
+    driverRidesSubscription = AppConstants.firestore
+        .collection(AppConstants.ridesKey)
+        .where("rideStatus", isEqualTo: RideStatus.Pending.name)
+        .snapshots()
+        .listen((event) {
+      var temprides =
+          event.docs.map((e) => RideDataModel.fromJson(e.data())).toList();
+
+      final DateTime now = DateTime.now();
+      final DateTime fiveMinutesAgo = now.subtract(const Duration(minutes: 5));
+      
+      temprides = temprides.where((element) {
         try {
-          rideTime = DateTime.parse(element.rideStartDate);
-        } catch (e) {
-          // If ISO fails, try old format "25/10/2025"
-          List<String> parts = element.rideStartDate.split('/');
-          if (parts.length == 3) {
-            int day = int.parse(parts[0]);
-            int month = int.parse(parts[1]);
-            int year = int.parse(parts[2]);
-            rideTime = DateTime(year, month, day);
-          } else {
-            return false;
+          DateTime rideTime;
+          
+          try {
+            rideTime = DateTime.parse(element.rideStartDate);
+          } catch (e) {
+            List<String> parts = element.rideStartDate.split('/');
+            if (parts.length == 3) {
+              int day = int.parse(parts[0]);
+              int month = int.parse(parts[1]);
+              int year = int.parse(parts[2]);
+              rideTime = DateTime(year, month, day);
+            } else {
+              return false;
+            }
           }
+          
+          return rideTime.isAfter(fiveMinutesAgo);
+        } catch (e) {
+          print("❌ Error parsing ride time: ${e.toString()}");
+          return false;
         }
-        
-        return rideTime.isAfter(fiveMinutesAgo);
-      } catch (e) {
-        print("❌ Error parsing ride time: ${e.toString()}");
-        return false;
-      }
-    }).toList();
-    
-    // 🔥 Sort manually (newest first)
-    temprides.sort((a, b) {
-      try {
-        DateTime aTime = DateTime.parse(a.rideStartDate);
-        DateTime bTime = DateTime.parse(b.rideStartDate);
-        return bTime.compareTo(aTime);
-      } catch (e) {
-        return 0;
-      }
+      }).toList();
+      
+      temprides.sort((a, b) {
+        try {
+          DateTime aTime = DateTime.parse(a.rideStartDate);
+          DateTime bTime = DateTime.parse(b.rideStartDate);
+          return bTime.compareTo(aTime);
+        } catch (e) {
+          return 0;
+        }
+      });
+
+      rides = temprides.where((element) {
+        Map data = calculateDistanceAndTime(
+            element.pickupLatitude, element.pickupLongitude);
+        if (data["distance"] <= 30000) {
+          element = element.copyWith(
+              distance: data["distance"], duration: data["time"]);
+          return true;
+        } else {
+          return false;
+        }
+      }).toList();
+      
+      print("✅ Found ${rides.length} pending rides nearby (last 5 min)");
+      emit(const DriverRidesRequestsSuccess(isSearchingForRides: true));
     });
+  }
 
-    // Filter by distance (300km radius)
-    rides = temprides.where((element) {
-      Map data = calculateDistanceAndTime(
-          element.pickupLatitude, element.pickupLongitude);
-      if (data["distance"] <= 300) {
-        element = element.copyWith(
-            distance: data["distance"], duration: data["time"]);
-        return true;
-      } else {
-        return false;
-      }
-    }).toList();
+  // Cancel the search
+  void cancelSearch() {
+    debugPrint("🛑 Canceling ride search...");
+    _shouldStop = true;
     
-    print("✅ Found ${rides.length} pending rides nearby (last 5 min)");
-    emit(DriverRidesRequestsSuccess());
-  });
-}
-  // accept the ride and send the offer
+    driverRidesSubscription.cancel();
+    circles = {};
+    rides = [];
+    
+    emit(const DriverRidesRequestsSuccess(isSearchingForRides: false));
+    
+    debugPrint("✅ Search cancelled and state updated");
+  }
 
-  void sendOffer(String rideId, String fare, BuildContext context) async {
-    final AuthCubit authCubit = Di().sl<AuthCubit>();
-    emit(DriverRidesRequestsLoading());
-    print('auth data is ${authCubit.authData}');
+  void stopCircles() {
+    _shouldStop = true;
+    circles = {};
+  }
+void sendOffer(String rideId, String fare, BuildContext context) async {
+  print("🚗 ===== DRIVER SENDING OFFER =====");
+  print("🚗 Ride ID: $rideId");
+  print("🚗 Fare: $fare");
+  
+  final AuthCubit authCubit = Di().sl<AuthCubit>();
+  emit(DriverRidesRequestsLoading(isSearchingForRides: state.isSearchingForRides));
+
+  try {
+    // 🔥 MANUAL FIX: Construct AuthModel manually with properly serialized DriverModel
+    final cleanAuthData = AuthModel(
+      uid: authCubit.authData.uid,
+      phoneNumber: authCubit.authData.phoneNumber,
+      email: authCubit.authData.email,
+      imageUrl: authCubit.authData.imageUrl,
+      username: authCubit.authData.username,
+      firstname: authCubit.authData.firstname,
+      lastname: authCubit.authData.lastname,
+      ratings: authCubit.authData.ratings,
+      totalRides: authCubit.authData.totalRides,
+      latitude: authCubit.authData.latitude,
+      longitude: authCubit.authData.longitude,
+      address: authCubit.authData.address,
+      // 🔥 Reconstruct DriverModel from JSON to ensure it's clean
+      driverModel: DriverModel.fromJson(authCubit.authData.driverModel.toJson()),
+      // Copy other fields if needed...
+    );
+    
+    print("🔥 Clean AuthData created successfully");
 
     AcceptRideModel acceptRideModel = AcceptRideModel(
-      driverData: authCubit.authData,
+      driverData: cleanAuthData,
       distance: 0.0,
       duration: 0.0,
       rideId: rideId,
       fare: double.parse(fare),
     );
 
+    print("🔥 AcceptRideModel created");
+    print("🔥 Calling usecase...");
+    
     var result = await _rideUsecase.call(rideId, acceptRideModel);
+    
     result.fold(
       (error) {
+        print("❌ USECASE ERROR: $error");
         WarningHelper.showToast(context, message: error.toString());
-        emit(DriverRidesRequestsFailure());
+        emit(DriverRidesRequestsFailure(isSearchingForRides: state.isSearchingForRides));
       },
       (data) {
-        emit(DriverRidesRequestsSuccess());
+        print("✅ USECASE SUCCESS: $data");
+        emit(DriverRidesRequestsSuccess(isSearchingForRides: state.isSearchingForRides));
       },
     );
+    
+  } catch (e, stackTrace) {
+    print("❌ ERROR: $e");
+    print("❌ Stack: $stackTrace");
+    WarningHelper.showToast(context, message: "Error: $e");
+    emit(DriverRidesRequestsFailure(isSearchingForRides: state.isSearchingForRides));
   }
-
-  void confirmRideByRider(
-    RiderAcceptModel acceptRideModel,
-  ) async {
+}
+  void confirmRideByRider(RiderAcceptModel acceptRideModel) async {
     try {
-      final GoogleMapCubit _googleMapCubit = Di().sl<GoogleMapCubit>();
+      final GoogleMapCubit googleMapCubit = Di().sl<GoogleMapCubit>();
       QuerySnapshot<Map<String, dynamic>> snapshot = await FirebaseFirestore
           .instance
           .collection("accepted")
@@ -154,6 +201,7 @@ void checkRidesInEntrance() {
           .collection("ridesRequest")
           .get();
       final AuthCubit authCubit = Di().sl<AuthCubit>();
+      
       if (snapshot.docs.isNotEmpty) {
         for (var i in snapshot.docs) {
           if (i.id != authCubit.authData.uid) {
@@ -161,9 +209,9 @@ void checkRidesInEntrance() {
                 .collection("accepted")
                 .doc(acceptRideModel.rideId)
                 .collection("ridesRequest")
-                .doc(i.id) // Use i.id to access the document ID directly
+                .doc(i.id)
                 .delete();
-            print("deleted succes fully");
+            print("deleted successfully");
           }
         }
       }
@@ -172,6 +220,7 @@ void checkRidesInEntrance() {
         destinationLatitude: acceptRideModel.pickupLatitude,
         destinationLongitude: acceptRideModel.pickupLongitude,
       );
+      
       await FirebaseFirestore.instance
           .collection("rides")
           .doc(acceptRideModel.rideId)
@@ -186,19 +235,22 @@ void checkRidesInEntrance() {
         "duration": result["duration_minutes"],
         "rideStatus": "running",
       });
-      _googleMapCubit.getPolyPoints(
+      
+      googleMapCubit.getPolyPoints(
         acceptRideModel.pickupLatitude,
         acceptRideModel.pickupLongitude,
       );
+      
       await FirebaseFirestore.instance
           .collection("accepted")
           .doc(authCubit.authData.uid)
           .collection("ride_detail")
           .doc(acceptRideModel.rideId)
           .delete();
-      print("data updated s");
+          
+      print("data updated successfully");
     } catch (e) {
-      print("accept error is ${e}");
+      print("accept error is $e");
     }
   }
 
@@ -206,14 +258,12 @@ void checkRidesInEntrance() {
     required double destinationLatitude,
     required double destinationLongitude,
   }) async {
-    // Get the user's current location
     Position currentPosition = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high);
 
     double currentLatitude = currentPosition.latitude;
     double currentLongitude = currentPosition.longitude;
 
-    // Calculate distance using Haversine formula
     double distanceInKm = _calculateHaversineDistance(
       currentLatitude,
       currentLongitude,
@@ -221,7 +271,6 @@ void checkRidesInEntrance() {
       destinationLongitude,
     );
 
-    // Assuming an average speed (in km/h), e.g., 50 km/h
     double averageSpeedKmh = 50;
     double durationInMinutes = (distanceInKm / averageSpeedKmh) * 60;
 
@@ -231,14 +280,13 @@ void checkRidesInEntrance() {
     };
   }
 
-// Haversine formula to calculate the distance between two points
   double _calculateHaversineDistance(
     double lat1,
     double lon1,
     double lat2,
     double lon2,
   ) {
-    const double R = 6371; // Radius of Earth in kilometers
+    const double R = 6371;
     double dLat = _degreesToRadians(lat2 - lat1);
     double dLon = _degreesToRadians(lon2 - lon1);
 
@@ -254,19 +302,17 @@ void checkRidesInEntrance() {
   double _degreesToRadians(double degrees) {
     return degrees * pi / 180;
   }
- 
-  /// remove the ride
+
   void removeRide(int index, BuildContext context) {
-    emit(DriverRidesRequestsLoading());
+    emit(DriverRidesRequestsLoading(isSearchingForRides: state.isSearchingForRides));
     rides.removeAt(index);
-    print("rides data lenght hk 28y ${rides.length}");
+    print("rides data length: ${rides.length}");
     if (rides.isEmpty) {
       Navigator.of(context).pop();
     }
-    emit(DriverRidesRequestsSuccess());
+    emit(DriverRidesRequestsSuccess(isSearchingForRides: state.isSearchingForRides));
   }
 
-  // calculate the distance and time
   Map<String, double> calculateDistanceAndTime(
       double latitude, double longitude) {
     final GoogleMapCubit googleMapCubit = Di().sl<GoogleMapCubit>();
@@ -285,26 +331,18 @@ void checkRidesInEntrance() {
     };
   }
 
-  // make a finding circle fo the driver
-
-  Set<Circle> circles = {};
-  bool _shouldStop = false;
-  void stopCircles() {
-    emit(DriverRidesRequestsLoading());
-    circles = {};
-    _shouldStop = true;
-    emit(DriverRidesRequestsSuccess());
-  }
-
   Future<void> buildCircles(Color circleColor) async {
     final GoogleMapCubit googleMapCubit = Di().sl<GoogleMapCubit>();
     for (var i = 1; i <= 6; i++) {
       if (_shouldStop) {
+        debugPrint("🛑 Circles stopped at iteration $i");
         break;
       }
-      emit(DriverRidesRequestsLoading());
-      debugPrint("sircle lenght $i");
+      
+      emit(DriverRidesRequestsLoading(isSearchingForRides: state.isSearchingForRides));
+      debugPrint("circle length $i");
       await Future.delayed(const Duration(milliseconds: 600));
+      
       String formattedNumber = '0.$i';
       var circle = Circle(
         circleId: CircleId("finding${i.toString()}"),
@@ -318,7 +356,8 @@ void checkRidesInEntrance() {
         ),
       );
       circles.add(circle);
-      emit(DriverRidesRequestsSuccess());
+      emit(DriverRidesRequestsSuccess(isSearchingForRides: state.isSearchingForRides));
+      
       if (i == 6) {
         circles = {};
         if (!_shouldStop) {
@@ -328,7 +367,6 @@ void checkRidesInEntrance() {
     }
   }
 
-  //accepted request notification
   void acceptedNotification() async {
     final AuthCubit authCubit = Di().sl<AuthCubit>();
     notificationSubscription = AppConstants.firestore

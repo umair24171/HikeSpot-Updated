@@ -175,9 +175,11 @@ void startActiveRideTracking(String driverId) {
     }
   }
 
-  Future<void> setMapStyle() async {
-    mapStyle = await rootBundle.loadString(AppImages.mapDarkTheme);
-  }
+ Future<void> setMapStyle() async {
+  // 🔥 USE STANDARD GOOGLE MAPS - No custom style
+  mapStyle = "[]"; // Empty style = default Google Maps
+  print("✅ Using standard Google Maps style");
+}
 
   Future<void> initializeMarkers0({
     double? latitude,
@@ -186,8 +188,9 @@ void startActiveRideTracking(String driverId) {
     markers.clear();
 
     // Load custom marker icons
-    pointerMarker = await getBytesFromAsset(AppImages.pointerIcon, 40);
-    userMarker = await getBytesFromAsset(AppImages.userHeader, 40);
+   // Around line 110
+pointerMarker = await getBytesFromAsset(AppImages.pointerIcon, 60); // 🔥 Changed from 40 to 60
+userMarker = await getBytesFromAsset(AppImages.userHeader, 60); // 🔥 Changed from 40 to 60
 
     // Add the main user's location marker (based on current location)
     if (currentLocation != null && pointerMarker != null) {
@@ -418,7 +421,15 @@ Future<void> getPolyPoints(double latitude, double longitude) async {
               currentLocation!.latitude,
               currentLocation!.longitude),
           destination: PointLatLng(latitude, longitude),
-          mode: TravelMode.driving),
+          mode: TravelMode.driving,
+          // 🔥 CRITICAL FIX: Avoid unpaved roads (gravel/sand) and ferries
+          avoidHighways: false, // Allow highways for faster routes
+          avoidTolls: false,    // Allow tolls
+          avoidFerries: true,   // ✅ Avoid ferries
+          // Note: flutter_polyline_points doesn't support avoidUnpaved directly
+          // But we can optimize by requesting alternative routes
+          alternatives: true,   // ✅ Get alternative routes to pick best paved option
+      ),
       googleApiKey: AppConstants.googleMapApiKey,
     );
     
@@ -518,7 +529,6 @@ double calculatePolylineDistance() {
   return totalDistance / 1000; // Convert meters to kilometers
 }
 
-// 🔥 NEW: Add this method to animate camera to show full route
 Future<void> animateCameraToRoute(double destLat, double destLng) async {
   try {
     final GoogleMapController controller = await mapController.future;
@@ -538,12 +548,28 @@ Future<void> animateCameraToRoute(double destLat, double destLng) async {
           ? currentLocation!.longitude 
           : destLng;
       
-      // Add padding to bounds (0.01 degrees ≈ 1km)
-      double padding = 0.01;
-      minLat -= padding;
-      maxLat += padding;
-      minLng -= padding;
-      maxLng += padding;
+      // 🔥 DYNAMIC padding based on distance
+      double distance = routeDistanceInKm;
+      double padding;
+      
+      if (distance > 100) {
+        padding = 0.15; // 15% padding for long routes (100+ km)
+      } else if (distance > 50) {
+        padding = 0.10; // 10% padding for medium routes (50-100 km)
+      } else if (distance > 20) {
+        padding = 0.08; // 8% padding for short routes (20-50 km)
+      } else {
+        padding = 0.05; // 5% padding for very short routes (<20 km)
+      }
+      
+      // Apply padding
+      double latPadding = (maxLat - minLat) * padding;
+      double lngPadding = (maxLng - minLng) * padding;
+      
+      minLat -= latPadding;
+      maxLat += latPadding;
+      minLng -= lngPadding;
+      maxLng += lngPadding;
       
       // Create bounds
       LatLngBounds bounds = LatLngBounds(
@@ -551,12 +577,13 @@ Future<void> animateCameraToRoute(double destLat, double destLng) async {
         northeast: LatLng(maxLat, maxLng),
       );
       
-      // Animate camera to show the full route with padding
+      // 🔥 Animate camera with proper padding
       await controller.animateCamera(
-        CameraUpdate.newLatLngBounds(bounds, 100), // 100 is padding in pixels
+        CameraUpdate.newLatLngBounds(bounds, 80), // Screen edge padding in pixels
       );
       
-      print("✅ Camera animated to show full route");
+      print("✅ Camera animated to show full ${routeDistanceText} route");
+      print("📍 Bounds: SW($minLat, $minLng) - NE($maxLat, $maxLng)");
     }
   } catch (e) {
     debugPrint("❌ Failed to animate camera: ${e.toString()}");

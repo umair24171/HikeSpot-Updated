@@ -15,6 +15,7 @@ import '../../../../utils/sizes.dart';
 import '../../../../widgets/gesture_container.dart';
 import '../widgets/bullet_point_text.dart';
 
+
 @RoutePage()
 class CaptainUploadLicencePage extends StatelessWidget {
   const CaptainUploadLicencePage({super.key});
@@ -144,6 +145,7 @@ class CaptainUploadLicencePage extends StatelessWidget {
                               return;
                             _captainRegisterCubit.uploadDrivingLicence(
                                 _imagePickerCubit.drivingLicence!);
+                                Navigator.pop(context);
                           },
                         );
                       },

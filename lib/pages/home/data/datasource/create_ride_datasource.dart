@@ -28,10 +28,9 @@ class CreateRideDatasourceImpl implements CreateRideDatasource {
           data: rideModel.rideId, key: AppConstants.ridesKey);
       return Right(rideModel);
     } catch (e) {
-      WarningHelper.showToast(context,
-          message: "Please Check your internet connection and try again");
-      log(e.toString());
-      return const Left("Error");
+      log('create-ride-error: ${e.toString()}');
+      // ✅ Return descriptive error instead of showing toast
+      return Left('Failed to create ride: ${e.toString()}');
     }
   }
 }

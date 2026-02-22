@@ -16,6 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/auth-model/auth_model.dart';
 part '../states/auth_state.dart';
 
+
 class AuthCubit extends Cubit<AuthState> {
   final AuthUseCase _authUseCase;
   AuthCubit(this._authUseCase) : super(AuthInitial());
@@ -55,6 +56,8 @@ updateUserInfo(context);
     emit(AuthSuccess(authData));
   }
 
+
+
   //change the app state
   void changeState(AppState state, context) {
     emit(AuthLoading());
@@ -63,11 +66,15 @@ updateUserInfo(context);
     emit(AuthSuccess(authData));
   }
 
+
+
   getAuthData(AuthModel authData) {
     emit(AuthLoading());
     this.authData = authData;
     emit(AuthSuccess(authData));
   }
+
+
 
   /// get the image url
   getImageUrl(String url) {
@@ -78,6 +85,8 @@ updateUserInfo(context);
     emit(AuthSuccess(authData));
   }
 
+
+
   /// get the id card front image url and back image url
   getIdCardImageUrl(String frontUrl, String backUrl) {
     emit(AuthLoading());
@@ -87,6 +96,8 @@ updateUserInfo(context);
     );
     emit(AuthSuccess(authData));
   }
+
+
 
   /// update the user info
   Future<Either<String, AuthModel>> updateUserInfo(BuildContext context) async {
@@ -103,6 +114,8 @@ updateUserInfo(context);
     );
     return result;
   }
+
+
 
   // init function
   Future<void> init(BuildContext context) async {
@@ -138,6 +151,7 @@ updateUserInfo(context);
 
   // update the notification status
   updateNotificationStatus(bool value, BuildContext context) async {
+       
     emit(AuthInitial());
     authData = authData.copyWith(notificationEnabled: value);
     emit(AuthSuccess(authData));
@@ -162,13 +176,6 @@ updateUserInfo(context);
     }
   }
 
-  void _listenForDeepLinks(context) {
-    // appLinks.uriLinkStream.listen(
-    //   (uri) {
-    //     handleDeepLink(uri, context);
-    //   },
-    // );
-  }
 
   void handleDeepLink(Uri uri, context) {
     log("Handling deep link: ${uri.toString()}");
@@ -200,6 +207,8 @@ updateUserInfo(context);
       emit(AuthSuccess(authData));
       return;
     }
+
+
     await AppConstants.firestore
         .collection("users")
         .doc(authData.uid)

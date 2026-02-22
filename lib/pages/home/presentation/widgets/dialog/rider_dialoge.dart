@@ -53,6 +53,17 @@ class _UserRideRequestDialogeState extends State<UserRideRequestDialoge> {
                           .snapshots(),
                       builder: (context, snapshot) {
                         if (snapshot.hasData) {
+                          // 🔥 ADD LOGGING
+    print("📊 Stream update - Has data: ${snapshot.hasData}");
+    print("📊 Ride ID: ${_createRideCubit.newRideId}");
+    
+    if (snapshot.hasData) {
+      print("📊 Docs count: ${snapshot.data!.docs.length}");
+      
+      if (snapshot.data!.docs.isNotEmpty) {
+        print("📊 First doc data: ${snapshot.data!.docs.first.data()}");
+      }
+      }
                          // Replace the empty docs section in UserRideRequestDialoge
 // This puts UI at top and bottom, leaving middle transparent for circles
 
